@@ -30,30 +30,36 @@ local function ColorStatusBar(self, value)
     end
 end
 
+---@type Button
+---@diagnostic disable-next-line: undefined-global
+local ItemRefCloseButton = ItemRefCloseButton
 LibEvent:attachEvent("VARIABLES_LOADED", function()
     --CloseButton
-    if (ItemRefCloseButton and not C_AddOns.IsAddOnLoaded("ElvUI")) then
-        ItemRefCloseButton:SetSize(14, 14)
-        ItemRefCloseButton:SetPoint("TOPRIGHT", -4, -4)
-        ItemRefCloseButton:SetNormalTexture("Interface\\Buttons\\UI-StopButton")
-        ItemRefCloseButton:SetPushedTexture("Interface\\Buttons\\UI-StopButton")
-        ItemRefCloseButton:GetNormalTexture():SetVertexColor(0.9, 0.6, 0)
+    if ItemRefCloseButton 
+        and not C_AddOns.IsAddOnLoaded("ElvUI")
+    then
+				ItemRefCloseButton:SetSize(14, 14)
+				ItemRefCloseButton:SetPoint("TOPRIGHT", -4, -4)
+				ItemRefCloseButton:SetNormalTexture("Interface\\Buttons\\UI-StopButton")
+				ItemRefCloseButton:SetPushedTexture("Interface\\Buttons\\UI-StopButton")
+				local tex = ItemRefCloseButton:GetNormalTexture()
+				if tex then tex:SetVertexColor(0.9, 0.6, 0) end
     end
     --StatusBar
-    local bar = GameTooltipStatusBar
-    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetAllPoints()
-    bar.bg:SetColorTexture(1, 1, 1)
-    bar.bg:SetVertexColor(0.2, 0.2, 0.2, 0.8)
-    bar.TextString = bar:CreateFontString(nil, "OVERLAY")
-    bar.TextString:SetPoint("CENTER")
-    bar.TextString:SetFont(NumberFontNormal:GetFont(), 11, "THINOUTLINE")
-    bar.capNumericDisplay = true
-    bar.lockShow = 1
-    bar:HookScript("OnShow", function(self)
+    local statusBar = GameTooltipStatusBar
+    statusBar.bg = statusBar:CreateTexture(nil, "BACKGROUND")
+    statusBar.bg:SetAllPoints()
+    statusBar.bg:SetColorTexture(1, 1, 1)
+    statusBar.bg:SetVertexColor(0.2, 0.2, 0.2, 0.8)
+    statusBar.TextString = statusBar:CreateFontString(nil, "OVERLAY")
+    statusBar.TextString:SetPoint("CENTER")
+    statusBar.TextString:SetFont(NumberFontNormal:GetFont(), 11, "THINOUTLINE")
+    statusBar.capNumericDisplay = true
+    statusBar.lockShow = 1
+    statusBar:HookScript("OnShow", function(self)
         ColorStatusBar(self)
     end)
-    bar:HookScript("OnValueChanged", function(self, hp)
+    statusBar:HookScript("OnValueChanged", function(self, hp)
         if (hp <= 0) then
             local min, max = self:GetMinMaxValues()
             self.TextString:SetFormattedText("|cff999999%s|r |cffffcc33<%s>|r", AbbreviateLargeNumbers(max), DEAD)
@@ -62,7 +68,7 @@ LibEvent:attachEvent("VARIABLES_LOADED", function()
         end
         ColorStatusBar(self, hp)
     end)
-    bar:HookScript("OnShow", function(self)
+    statusBar:HookScript("OnShow", function(self)
         if (addon.db.general.statusbarHeight == 0) then
             self:Hide()
         end

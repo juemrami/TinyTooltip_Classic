@@ -2,7 +2,7 @@
 -------------------------------------
 -- Core Author:M
 -------------------------------------
-
+---@class TinyTooltip
 TinyTooltip = {}
 
 local LibEvent = LibStub:GetLibrary("LibEvent.7000")
@@ -28,7 +28,7 @@ local UnitIsQuestBoss = UnitIsQuestBoss or function() end
 local IsFlying = IsFlying or function() end
 local C_BattleNet_GetAccountInfoByGUID = C_BattleNet and C_BattleNet.GetAccountInfoByGUID or function() end
 
-
+---@class TinyTooltip
 local addon = TinyTooltip
 
 -- language & global vars

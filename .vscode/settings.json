@@ -98,5 +98,6 @@
         "FACTION_ALLIANCE",
         "UIDropDownMenu_CreateInfo",
         "GameFontHighlightSmall"
-    ]
+    ],
+    "editor.wordWrapColumn": 90
 }

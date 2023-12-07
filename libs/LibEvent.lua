@@ -17,7 +17,6 @@ frame:SetScript("OnEvent", function(self, event, ...)
     ---@cast event string
     if (not lib.events[event]) then return end
     for k, v in pairs(lib.events[event]) do
-        print(v)
         v(v, ...)
     end
 end)

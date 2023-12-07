@@ -12,6 +12,7 @@ local UIDropDownMenu_SetSelectedValue = LibDropdown.SetSelectedValue
 local UIDropDownMenuTemplate = "UIDropDownMenuTemplate"
 
 local addonName = ...
+---@class TinyTooltip
 local addon = TinyTooltip
 local CopyTable = CopyTable
 
@@ -89,6 +90,7 @@ local function SetVariable(keystring, value, tbl)
     LibEvent:trigger("tooltip:variable:changed", keystring, value)
 end
 
+---@class Widgets
 local widgets = {}
 
 function widgets:checkbox(parent, config, labelText)
@@ -152,10 +154,19 @@ function widgets:colorpick(parent, config)
     local a, r, g, b = 1
     if (config.colortype == "hex") then
         r, g, b = addon:GetRGBColor(GetVariable(config.keystring))
+        print(r, g, b, config.keystring, config.colortype)
     else
         r, g, b, a = unpack(GetVariable(config.keystring))
+        print(r, g, b, config.keystring, config.colortype)
     end
+    -- above functions may return nil 
+    -- like on "unit.player.elements.name.color" for example
+    if not (r and g and b) then 
+        r, g, b = 0, 0, 0
+    end
+    ---@class ColorPickerButton : Button
     local frame = CreateFrame("Button", nil, parent)
+
     frame.keystring = config.keystring
     frame.colortype = config.colortype
     frame.hasopacity = config.hasopacity
@@ -169,6 +180,7 @@ function widgets:colorpick(parent, config)
     frame.Text:SetPoint("LEFT", frame, "RIGHT", 5, 0)
     frame.Text:SetText(L[config.keystring])
     frame.Text:SetShown(not config.hidetitle)
+    assert(r and g and b, "Use valid color value for RBG [0-1].")
     frame:GetNormalTexture():SetVertexColor(r, g, b, a)
     frame:SetScript("OnClick", function(self)
         local r, g, b, a = self:GetNormalTexture():GetVertexColor()
@@ -181,6 +193,7 @@ function widgets:colorpick(parent, config)
                 r = tonumber(format("%.4f",r))
                 g = tonumber(format("%.4f",g))
                 b = tonumber(format("%.4f",b))
+                assert(r and g and b and a, "Use valid color value.")
                 if (a ~= aa) then
                     ColorPickerFrame.tipframe:GetNormalTexture():SetVertexColor(r,g,b,a)
                     SetVariable(ColorPickerFrame.tipframe.keystring, {r,g,b,a})
@@ -192,6 +205,8 @@ function widgets:colorpick(parent, config)
                 r = tonumber(format("%.4f",r))
                 g = tonumber(format("%.4f",g))
                 b = tonumber(format("%.4f",b))
+                assert(r and g and b and a, "Use valid color value.")
+
                 ColorPickerFrame.tipframe:GetNormalTexture():SetVertexColor(r,g,b,a)
                 if (ColorPickerFrame.tipframe.colortype == "hex") then
                     SetVariable(ColorPickerFrame.tipframe.keystring, addon:GetHexColor(r,g,b))
@@ -768,6 +783,7 @@ local function InitOptions(list, parent, height)
             elseif (v.type == "dropdown" or v.type == "dropdownslider") then offsetX = -15
             elseif (v.type == "anchor") then offsetX = -15
             else offsetX = 0 end
+
             element = widgets[v.type](widgets, parent, v)
             element:SetPoint("TOPLEFT", parent.anchor, "BOTTOMLEFT", offsetX, -(i*height))
         end
