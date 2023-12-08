@@ -193,15 +193,22 @@ function addon:GetHexColor(color, g, b)
     end
 end
 
--- 顔色
+-- 顔色 (Color)
+--- Returns the RGB values of a hex color. (1, 1, 1) if the color is invalid.
+---@param hex string Hex color
+---@return integer R 
+---@return integer G
+---@return integer B
 function addon:GetRGBColor(hex)
-    if (not hex) then return 1, 1, 1 end
-    if (string.match(hex, "^%x%x%x%x%x%x$")) then
-        local r = tonumber(strsub(hex,1,2),16) or 255
-        local g = tonumber(strsub(hex,3,4),16) or 255
-        local b = tonumber(strsub(hex,5,6),16) or 255
-        return r/255, g/255, b/255
+    local r, g, b 
+    if (hex and string.match(hex, "^%x%x%x%x%x%x$")) then
+        r = tonumber(strsub(hex,1,2),16) or 255
+        g = tonumber(strsub(hex,3,4),16) or 255
+        b = tonumber(strsub(hex,5,6),16) or 255
     end
+
+    if not (r and b and g) then return 1, 1, 1 
+    else return r/255, g/255, b/255 end
 end
 
 --字體

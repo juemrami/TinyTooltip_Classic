@@ -97,7 +97,9 @@
         "FACTION_HORDE",
         "FACTION_ALLIANCE",
         "UIDropDownMenu_CreateInfo",
-        "GameFontHighlightSmall"
+        "GameFontHighlightSmall",
+        "GameFontHighlight",
+        "GameFontNormal"
     ],
     "editor.wordWrapColumn": 90
 }

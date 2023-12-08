@@ -12,7 +12,7 @@ local UIDropDownMenu_SetSelectedValue = LibDropdown.SetSelectedValue
 local UIDropDownMenuTemplate = "UIDropDownMenuTemplate"
 
 local addonName = ...
----@class TinyTooltip
+---@type TinyTooltip
 local addon = TinyTooltip
 local CopyTable = CopyTable
 
@@ -105,6 +105,9 @@ function widgets:checkbox(parent, config, labelText)
 end
 
 function widgets:slider(parent, config)
+    ---@class SliderWidget : Slider
+    ---@field Low FontString
+    ---@field High FontString
     local frame = CreateFrame("Slider", nil, parent, "OptionsSliderTemplate")
     frame:SetWidth(118)
     frame.Text = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
@@ -154,16 +157,14 @@ function widgets:colorpick(parent, config)
     local a, r, g, b = 1
     if (config.colortype == "hex") then
         r, g, b = addon:GetRGBColor(GetVariable(config.keystring))
-        print(r, g, b, config.keystring, config.colortype)
     else
         r, g, b, a = unpack(GetVariable(config.keystring))
-        print(r, g, b, config.keystring, config.colortype)
     end
     -- above functions may return nil 
-    -- like on "unit.player.elements.name.color" for example
     if not (r and g and b) then 
-        r, g, b = 0, 0, 0
+        r, g, b = 1, 1, 1
     end
+
     ---@class ColorPickerButton : Button
     local frame = CreateFrame("Button", nil, parent)
 
@@ -361,7 +362,7 @@ local function CreateAnchorInput(frame, k)
     end)
     return box
 end
-
+---@class SAFrame : Frame
 local saframe = CreateFrame("Frame", nil, UIParent, "ThinBorderTemplate")
 saframe:Hide()
 saframe:SetFrameStrata("DIALOG")
@@ -383,6 +384,7 @@ CreateAnchorButton(saframe, "BOTTOM")
 saframe:SetScript("OnShow", function() grid:Show() end)
 saframe:SetScript("OnHide", function() grid:Hide() end)
 
+---@class CAFrame : Frame, BackdropTemplate
 local caframe = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "ThinBorderTemplate,BackdropTemplate" or "ThinBorderTemplate")
 caframe:Hide()
 caframe:SetFrameStrata("DIALOG")
@@ -426,6 +428,9 @@ CreateAnchorButton(caframe, "RIGHT")
 CreateAnchorButton(caframe, "BOTTOMRIGHT")
 
 function widgets:anchorbutton(parent, config)
+    ---@class AnchorButton : Button
+    ---@field keystring string
+    ---@field Text FontString 
     local frame = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     frame.keystring = config.keystring
     frame:SetSize(70, 22)

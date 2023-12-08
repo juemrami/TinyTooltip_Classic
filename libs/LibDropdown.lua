@@ -4,6 +4,7 @@
 ---------------------------------
 
 local MAJOR, MINOR = "LibDropdown.7000", 2
+---@class LibDropdown.7000
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then return end
@@ -11,7 +12,16 @@ if not lib then return end
 local DROPDOWNFRAME_MIN_WIDTH  = 130
 local DROPDOWNFRAME_MAX_HEIGHT = 298
 
+---@class UIPanelScrollFrameTemplate : ScriptRegion
+---@field ScrollBar Texture
+
+---@class DropDownFrame : Frame
+---@field Bg Texture
+---@field BorderTopLeft ScriptRegion
+---@field BorderBottomRight ScriptRegion
+---@field ScrollFrame ScrollFrame|UIPanelScrollFrameTemplate
 local DropDownFrame = CreateFrame("Frame", nil, UIParent, "InsetFrameTemplate3")
+
 DropDownFrame.Bg:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Background-Dark")
 DropDownFrame.Bg:SetPoint("TOPLEFT", DropDownFrame.BorderTopLeft, "BOTTOMRIGHT", -6, 5)
 DropDownFrame.Bg:SetPoint("BOTTOMRIGHT", DropDownFrame.BorderBottomRight, "TOPLEFT", 5, -5)
@@ -54,8 +64,27 @@ function DropDownFrame:GetSelectedInfo(value)
     end
 end
 
+---@class DropDownButton.Text
+---@field font string
+---@field size number
+---@field flag string
+
+---@class DropDownButton.Info
+---@field text string?
+---@field font string?
+---@field value string?
+---@field checked boolean?
+---@field func function?
+---@field texture string|number?
+---@field staticWidth number?
+---@field arg1 any?
+---@field arg2 any?
+
+---Add a button to the dropdown list.
+---@param info DropDownButton.Info
 function DropDownFrame:AddButton(info)
     local index = 1
+    ---@class DropDownButton
     local button
     while (self.ListFrame["button"..index]) do
         if (not self.ListFrame["button"..index]:IsShown()) then
@@ -65,6 +94,9 @@ function DropDownFrame:AddButton(info)
         index = index + 1
     end
     if (not button) then
+        ---@class DropDownButton : Button
+        ---@field text DropDownButton.Text | FontString
+        ---@field info DropDownButton.Info
         button = CreateFrame("Button", nil, self.ListFrame)
         button:SetPoint("LEFT")
         button:SetPoint("RIGHT")
@@ -84,8 +116,13 @@ function DropDownFrame:AddButton(info)
         button.texture:SetPoint("TOPLEFT", 22, 0)
         button.texture:SetPoint("BOTTOMRIGHT", -18, 0)
         button.text = button:CreateFontString(nil, "BORDER")
-        button.text:SetFont(GameFontHighlightSmall:GetFont(), 14, "THINOUTLINE")
-        button.text.font, button.text.size, button.text.flag = button.text:GetFont()
+        assert(GameFontHighlightSmall, "GameFontHighlightSmall global not found. Required for LibDropdown.7000")
+        button.text.font = (GameFontHighlightSmall --[[@as Font]]):GetFont()
+        button.text.size = 14
+        button.text.flag = "THINOUTLINE"
+        button.text:SetFont(
+            button.text.font, button.text.size, button.text.flag
+        )
         button.text:SetPoint("LEFT", 24, 0)
         button.info = {}
         button:SetScript("OnClick", function(self)
@@ -110,11 +147,14 @@ function DropDownFrame:AddButton(info)
     button.info.font = info.font
     button.info.arg1 = info.arg1
     button.info.arg2 = info.arg2
-    local width = info.staticWidth and info.staticWidth or button.text:GetWidth()+32
+    local width = info.staticWidth and info.staticWidth 
+        or button.text:GetWidth() + 32
     button:SetWidth(width)
-    button:SetPoint("TOPLEFT", 2, -18*index+18)
+    button:SetPoint("TOPLEFT", 2, -18 * index + 18)
     self.ListFrame:SetHeight(18*index)
-    self.ListFrame:SetWidth(max(DROPDOWNFRAME_MIN_WIDTH, self.ListFrame:GetWidth(), width+20))
+    self.ListFrame:SetWidth(
+        max(DROPDOWNFRAME_MIN_WIDTH, self.ListFrame:GetWidth(), width+20)
+    )
     self:SetWidth(self.ListFrame:GetWidth())
 end
 
@@ -219,7 +259,7 @@ lib.ToggleDropDownMenu = function(level, value, dropDownFrame, anchorName, xOffs
         local cursorX, cursorY = GetCursorPosition()
         xOffset = cursorX + (xOffset or 0)
         yOffset = cursorY + (yOffset or 0)
-        --@todo
+        ---@todo
     elseif (anchorName) then
         Extensions.ToggleDropDownFrame(anchorName)
     end
