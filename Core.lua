@@ -36,18 +36,22 @@ addon.L, addon.G = {}, {}
 setmetatable(addon.L, {__index = function(_, k) return k end})
 setmetatable(addon.G, {__index = function(_, k) return _G[k] or k end})
 
+---@class TinyTooltip.GameTooltip : GameTooltip
+local GameTooltip = GameTooltip -- local reference for LuaLS class
+
 -- tooltips
+---@type GameTooltip[]
 addon.tooltips = {
     GameTooltip,
     ItemRefTooltip,
     ShoppingTooltip1,
     ShoppingTooltip2,
+    ---@diagnostic disable-next-line: undefined-global
     WorldMapTooltip,
     ItemRefShoppingTooltip1,
     ItemRefShoppingTooltip2,
     NamePlateTooltip,
 }
-
 -- 圖標集
 addon.icons = {
     Alliance   = "|TInterface\\TargetingFrame\\UI-PVP-ALLIANCE:14:14:0:0:64:64:10:36:2:38|t",
@@ -105,7 +109,7 @@ function addon:FixNumericKey(t)
     local tbl = {}
     for k, v in pairs(t) do
         if (type(k) == "string" and string.match(k,"^[1-9]%d*$")) then
-            key = tonumber(k)
+            key = tonumber(k) ---@type number
             t[k] = nil
             tbl[key] = v
         end
@@ -318,7 +322,7 @@ function addon:GetUnitSpeed(unit)
 	if (UnitIsOtherPlayersPet(unit)) then
     elseif (IsSwimming(unit)) then
 		speed = swimSpeed
-	elseif (IsFlying(unit)) then
+	elseif (UnitIsUnit("player", unit) and IsFlying()) then
 		speed = flightSpeed
 	end
     return speed+0.5
@@ -371,8 +375,14 @@ function addon:GetZone(unit, unitname, realm)
     end
 end
 
--- 全信息
+-- 全信息 (Full UnitInfo)
+---@class TinyTooltip.UnitInfo
+---@field itemQuality number? Used by item tooltip.
 local t = {}
+
+--- Returns the unit information.
+---@param unit UnitToken
+---@return TinyTooltip.UnitInfo
 function addon:GetUnitInfo(unit)
     local name, realm = UnitName(unit)
     local pvpName = UnitPVPName(unit)
@@ -503,8 +513,17 @@ function addon:GetUnitData(unit, elements, raw)
     return data
 end
 
+---filter units by comparing with properties in unit info.
+---@alias FilterFunc fun(raw: TinyTooltip.UnitInfo, ...): boolean?, ...
 
-addon.filterfunc, addon.colorfunc = {}, {}
+---Gets the `r, g, b, hexString` of a related color for a unit property.
+---@alias ColorFunc fun(raw: TinyTooltip.UnitInfo): number, number, number, string? 
+
+---@type table<string, FilterFunc>
+addon.filterfunc = {}
+
+---@type table<"class"|"level"|"reaction"|"itemQuality"|"selection"|"faction", ColorFunc>
+addon.colorfunc = {}
 
 addon.colorfunc.class = function(raw)
     if (CUSTOM_CLASS_COLORS) then
@@ -527,7 +546,6 @@ addon.colorfunc.reaction = function(raw)
     local color = FACTION_BAR_COLORS[raw.reaction or 4]
     return color.r, color.g, color.b, addon:GetHexColor(color)
 end
-
 addon.colorfunc.itemQuality = function(raw)
     local color = ITEM_QUALITY_COLORS[raw.itemQuality or 0]
     return color.r, color.g, color.b, addon:GetHexColor(color)
@@ -813,9 +831,22 @@ LibEvent:attachTrigger("tooltip.style.init", function(self, tip)
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         edgeSize = 14,
     }
+    
+    ---@class TinyTooltip.GameTooltip.Style : Frame, BackdropTemplate
+    ---@field inside Frame|BackdropTemplate
+    ---@field outside Frame|BackdropTemplate
+    ---@field mask Texture
+
+    ---@class TinyTooltip.GameTooltip
+    ---@field style TinyTooltip.GameTooltip.Style
+    ---@field SetBackdrop function?
+    ---@field identity "diy"|nil Flag for DIY tooltip
+    local tip = tip
+
     if (tip.SetBackdrop) then
         tip:SetBackdrop(nil)
     end
+    ---@diagnostic disable-next-line: assign-type-mismatch
     tip.style = CreateFrame("Frame", nil, tip, BackdropTemplateMixin and "BackdropTemplate" or nil)
     tip.style:SetFrameLevel(tip:GetFrameLevel())
     tip.style:SetAllPoints()
@@ -823,16 +854,28 @@ LibEvent:attachTrigger("tooltip.style.init", function(self, tip)
     tip.style:SetBackdropColor(0, 0, 0, 0.9)
     tip.style:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.8)
     tip.style.inside = CreateFrame("Frame", nil, tip.style, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    
+    ---@diagnostic disable-next-line: param-type-mismatch
     tip.style.inside:SetBackdrop({edgeSize=1,edgeFile="Interface\\Buttons\\WHITE8X8"})
+    
     tip.style.inside:SetPoint("TOPLEFT", tip.style, "TOPLEFT", 1, -1)
     tip.style.inside:SetPoint("BOTTOMRIGHT", tip.style, "BOTTOMRIGHT", -1, 1)
+    
+    ---@diagnostic disable-next-line: param-type-mismatch
     tip.style.inside:SetBackdropBorderColor(0.1, 0.1, 0.1, 0.8)
+    
     tip.style.inside:Hide()
     tip.style.outside = CreateFrame("Frame", nil, tip.style, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    
+    ---@diagnostic disable-next-line: param-type-mismatch
     tip.style.outside:SetBackdrop({edgeSize=1,edgeFile="Interface\\Buttons\\WHITE8X8"})
+    
     tip.style.outside:SetPoint("TOPLEFT", tip.style, "TOPLEFT", -1, 1)
     tip.style.outside:SetPoint("BOTTOMRIGHT", tip.style, "BOTTOMRIGHT", 1, -1)
+    
+    ---@diagnostic disable-next-line: param-type-mismatch
     tip.style.outside:SetBackdropBorderColor(0, 0, 0, 0.5)
+    
     tip.style.outside:Hide()
     tip.style.mask = tip.style:CreateTexture(nil, "OVERLAY")
     tip.style.mask:SetTexture("Interface\\Tooltips\\UI-Tooltip-Background")
@@ -866,6 +909,7 @@ LibEvent:attachTrigger("tooltip.style.init", function(self, tip)
     if (tip:HasScript("OnTooltipSetQuest")) then
         tip:HookScript("OnTooltipSetQuest", function(self) LibEvent:trigger("tooltip:quest", self) end)
     end
+
     if (tip == GameTooltip or tip.identity == "diy") then
         tip.GetBackdrop = function(self) return self.style:GetBackdrop() end
         tip.GetBackdropColor = function(self) return self.style:GetBackdropColor() end

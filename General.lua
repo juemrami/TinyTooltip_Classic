@@ -9,12 +9,17 @@ local addon = TinyTooltip
 BigTipDB = {}
 TinyTooltipCharacterDB = {}
 
+---@class UnitRelatedFrame : frame
+---@field unit string?
+
 local function ColorStatusBar(self, value)
     if (addon.db.general.statusbarColor == "auto") then
         local unit = "mouseover"
+        ---@type Frame|UnitRelatedFrame
         local focus = GetMouseFocus()
         if (focus and focus.unit) then
-            unit = focus.unit
+            ---@type string
+            unit = focus.unit 
         end
         local r, g, b
         if (UnitIsPlayer(unit)) then
@@ -74,6 +79,7 @@ LibEvent:attachEvent("VARIABLES_LOADED", function()
         end
     end)
     --Variable
+    ---@class TinyTooltip.db
     addon.db = addon:MergeVariable(addon.db, BigTipDB)
     if (addon.db.general.SavedVariablesPerCharacter) then
         local db = CopyTable(addon.db)

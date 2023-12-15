@@ -1,6 +1,9 @@
-
+---@class TinyTooltip
 local addon = TinyTooltip
 
+---Default saved variables for TinyTooltip.
+---@class TinyTooltip.db
+---@field unit table<"player"|"npc", TinyTooltip.db.unitConfig>
 addon.db = {
     version = 2.8,
     general = {
@@ -32,6 +35,7 @@ addon.db = {
         SavedVariablesPerCharacter = false,
     },
     unit = {
+        ---@class TinyTooltip.db.unitConfig
         player = {
             coloredBorder = "class",                --玩家邊框顔色 default|class|level|reaction|itemQuality|selection|faction|HEX
             background = { colorfunc = "class", alpha = 0.9, },

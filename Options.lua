@@ -11,6 +11,14 @@ local UIDropDownMenu_GetSelectedValue = LibDropdown.GetSelectedValue
 local UIDropDownMenu_SetSelectedValue = LibDropdown.SetSelectedValue
 local UIDropDownMenuTemplate = "UIDropDownMenuTemplate"
 
+--- see [UIDropDownMenuTemplates.xml](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/FrameXML/UIDropDownMenuTemplates.xml#L11)
+---@class UIDropDownMenuTemplate : Frame 
+---@field Left Texture
+---@field Middle Texture
+---@field Right Texture
+---@field Text FontString
+---@field Button Button
+
 local addonName = ...
 ---@type TinyTooltip
 local addon = TinyTooltip
@@ -53,12 +61,18 @@ local function CallTrigger(keystring, value)
     elseif (strfind(keystring, "general.statusbarFont")) then
         LibEvent:trigger("tooltip.statusbar.font", addon.db.general.statusbarFont, addon.db.general.statusbarFontSize, addon.db.general.statusbarFontFlag)
     elseif (strfind(keystring, "general.headerFont")) then
+        --why is this out of the loop?
         LibEvent:trigger("tooltip.style.font.header", tip, addon.db.general.headerFont, addon.db.general.headerFontSize, addon.db.general.headerFontFlag)
     elseif (strfind(keystring, "general.bodyFont")) then
+        --why is this out of the loop?
         LibEvent:trigger("tooltip.style.font.body", tip, addon.db.general.bodyFont, addon.db.general.bodyFontSize, addon.db.general.bodyFontFlag)
     end
 end
 
+---Use a period (`.`) seperated string of keys of retrieve a value from nested tables.
+---@param keystring string
+---@param tbl table? a table to search inside of. if `nil` uses the addon's saved variables db.
+---@return any
 local function GetVariable(keystring, tbl)
     if (keystring == "general.SavedVariablesPerCharacter") then
         return BigTipDB.general.SavedVariablesPerCharacter
@@ -72,6 +86,10 @@ local function GetVariable(keystring, tbl)
     return value
 end
 
+--- Set a value in nested tables use a period seperated string of keys.
+---@param keystring string
+---@param value any
+---@param tbl table? a table to search inside of. if `nil` uses the addon's saved variables db.
 local function SetVariable(keystring, value, tbl)
     local keys = {strsplit(".", keystring)}
     local num = #keys
@@ -90,11 +108,36 @@ local function SetVariable(keystring, value, tbl)
     LibEvent:trigger("tooltip:variable:changed", keystring, value)
 end
 
+---@class TinyTooltip.Widget
+---@field keystring string?
+---@field tooltipText string?
+
+---@class CheckboxWidget : TinyTooltip.Widget, CheckButton
+---@field Text FontString
+
+---@class SliderWidget : TinyTooltip.Widget, Slider
+---@field Text FontString
+---@field High FontString From OptionsSliderTemplate
+---@field Low FontString From OptionsSliderTemplate
+
+---@class EditBoxWidget : TinyTooltip.Widget, EditBox
+
+---@class ColorPickerWidget : TinyTooltip.Widget, Button
+---@field Text FontString
+---@field colortype "hex"?
+---@field hasopacity boolean?
+---@field bg Texture
+
 ---@class Widgets
 local widgets = {}
 
+---Create a new checkbox widget from the config options.
+---@param parent Frame? parent frame for the created widget.
+---@param config any
+---@param labelText string? text to display next to the checkbox.
+---@return CheckboxWidget
 function widgets:checkbox(parent, config, labelText)
-    local frame = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
+    local frame = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate") --[[@as CheckboxWidget]]
     frame.keystring = config.keystring
     frame.tooltipText = labelText or L[config.keystring]
     frame.Text:SetWidth(0)
@@ -105,10 +148,7 @@ function widgets:checkbox(parent, config, labelText)
 end
 
 function widgets:slider(parent, config)
-    ---@class SliderWidget : Slider
-    ---@field Low FontString
-    ---@field High FontString
-    local frame = CreateFrame("Slider", nil, parent, "OptionsSliderTemplate")
+    local frame = CreateFrame("Slider", nil, parent, "OptionsSliderTemplate") --[[@as SliderWidget]]
     frame:SetWidth(118)
     frame.Text = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
     frame.Text:SetPoint("LEFT", frame, "RIGHT", 8, 0)
@@ -123,6 +163,7 @@ function widgets:slider(parent, config)
     frame:SetValueStep(config.step)
     frame:SetValue(GetVariable(config.keystring))
     frame:SetScript("OnValueChanged", function(self, value)
+        ---@cast self SliderWidget
         local step = self:GetValueStep() or 1
         if (step < 0.1) then
             value = format("%.2f", value)
@@ -132,15 +173,16 @@ function widgets:slider(parent, config)
             value = floor(value+0.2)
         end
         if (self:GetValue() ~= value) then
-            SetVariable(self.keystring, value)
-            self.High:SetText(value)
+            ---@see TinyTooltip.db.unitConfig.background alpha
+            SetVariable(self.keystring, tonumber(value))
+            self.High:SetText(tostring(value))
         end
     end)
     return frame
 end
 
 function widgets:editbox(parent, config)
-    local frame = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    local frame = CreateFrame("EditBox", nil, parent, "InputBoxTemplate") --[[@as EditBoxWidget]]
     frame.keystring = config.keystring
     frame:SetAutoFocus(false)
     frame:SetSize(88, 14)
@@ -153,8 +195,19 @@ function widgets:editbox(parent, config)
     return frame
 end
 
+
+---@class Config
+---@field colortype string?
+---@field keystring string
+---@field hasopacity boolean?
+---@field hidetitle boolean?
+
+---Create a new color picker widget from the config options.
+---@param parent Frame parent frame for the created widget.
+---@param config Config
+---@return ColorPickerWidget
 function widgets:colorpick(parent, config)
-    local a, r, g, b = 1
+    local a, r, g, b = 1, nil, nil, nil
     if (config.colortype == "hex") then
         r, g, b = addon:GetRGBColor(GetVariable(config.keystring))
     else
@@ -164,10 +217,9 @@ function widgets:colorpick(parent, config)
     if not (r and g and b) then 
         r, g, b = 1, 1, 1
     end
+    -- assert(r and g and b, "Use valid value for RBG values [0-1].")
 
-    ---@class ColorPickerButton : Button
-    local frame = CreateFrame("Button", nil, parent)
-
+    local frame = CreateFrame("Button", nil, parent) --[[@as ColorPickerWidget]]
     frame.keystring = config.keystring
     frame.colortype = config.colortype
     frame.hasopacity = config.hasopacity
@@ -181,20 +233,25 @@ function widgets:colorpick(parent, config)
     frame.Text:SetPoint("LEFT", frame, "RIGHT", 5, 0)
     frame.Text:SetText(L[config.keystring])
     frame.Text:SetShown(not config.hidetitle)
-    assert(r and g and b, "Use valid color value for RBG [0-1].")
     frame:GetNormalTexture():SetVertexColor(r, g, b, a)
+
     frame:SetScript("OnClick", function(self)
+        ---@diagnostic disable-next-line: unknown-cast-variable
+        ---@cast ColorPickerFrame ColorSelect
+        ---@cast self ColorPickerWidget
         local r, g, b, a = self:GetNormalTexture():GetVertexColor()
         local info = {
-            r = r, g = g, b = b, opacity = 1-a, hasOpacity = self.hasopacity,
+            r = r, g = g, b = b, opacity = 1 - a, hasOpacity = self.hasopacity,
+
             opacityFunc = self.hasopacity and function()
-                local r, g, b = ColorPickerFrame:GetColorRGB()
-                local a = 1-format("%.2f", OpacitySliderFrame:GetValue())
+                local r, g, b =  ColorPickerFrame:GetColorRGB()
+                ---@type number
+                local a = 1 - format("%.2f", OpacitySliderFrame:GetValue())
                 local aa = select(4, ColorPickerFrame.tipframe:GetNormalTexture():GetVertexColor())
-                r = tonumber(format("%.4f",r))
-                g = tonumber(format("%.4f",g))
-                b = tonumber(format("%.4f",b))
-                assert(r and g and b and a, "Use valid color value.")
+                r = tonumber(format("%.4f",r))  --[[@as number]]
+                g = tonumber(format("%.4f",g))  --[[@as number]]
+                b = tonumber(format("%.4f",b))  --[[@as number]]
+                -- assert(r and g and b and a, "Use valid color value.")
                 if (a ~= aa) then
                     ColorPickerFrame.tipframe:GetNormalTexture():SetVertexColor(r,g,b,a)
                     SetVariable(ColorPickerFrame.tipframe.keystring, {r,g,b,a})
@@ -203,10 +260,10 @@ function widgets:colorpick(parent, config)
             swatchFunc = function()
                 local r, g, b = ColorPickerFrame:GetColorRGB()
                 local a = 1-format("%.2f", OpacitySliderFrame:GetValue())
-                r = tonumber(format("%.4f",r))
-                g = tonumber(format("%.4f",g))
-                b = tonumber(format("%.4f",b))
-                assert(r and g and b and a, "Use valid color value.")
+                r = tonumber(format("%.4f",r))  --[[@as number]]
+                g = tonumber(format("%.4f",g))  --[[@as number]]
+                b = tonumber(format("%.4f",b))  --[[@as number]]
+                -- assert(r and g and b and a, "Use valid color value.")
 
                 ColorPickerFrame.tipframe:GetNormalTexture():SetVertexColor(r,g,b,a)
                 if (ColorPickerFrame.tipframe.colortype == "hex") then
@@ -215,11 +272,17 @@ function widgets:colorpick(parent, config)
                     SetVariable(ColorPickerFrame.tipframe.keystring, {r,g,b,a})
                 end
                 --for element color
-                if (ColorPickerFrame.tipframe:GetParent().colordropdown) then
-                    UIDropDownMenu_SetText(ColorPickerFrame.tipframe:GetParent().colordropdown, VIDEO_QUALITY_LABEL6)
+                local colorDropdown = (ColorPickerFrame
+                    .tipframe:GetParent() --[[@as ContainerElement]])
+                    .colordropdown
+                if colorDropdown then
+                    UIDropDownMenu_SetText(colorDropdown, VIDEO_QUALITY_LABEL6)
                 end
             end,
         }
+
+        ---Adding a reference in the shared global table here. Not Ideal.
+        ---@diagnostic disable-next-line: inject-field
         ColorPickerFrame.tipframe = self
         if (not self.hasopacity) then OpacitySliderFrame:SetValue(info.opacity) end
         OpenColorPicker(info)
@@ -227,8 +290,12 @@ function widgets:colorpick(parent, config)
     return frame
 end
 
+---@class DropdownWidget : TinyTooltip.Widget, Frame, UIDropDownMenuTemplate
+---@field dropdata table
+---@field Label FontString 
+---@field selectedFunc fun(self:DropdownWidget, value: any, text: string)
 function widgets:dropdown(parent, config, labelText)
-    local frame = CreateFrame("Frame", tostring(config), parent, UIDropDownMenuTemplate)
+    local frame = CreateFrame("Frame", tostring(config), parent, UIDropDownMenuTemplate) --[[@as DropdownWidget]]
     frame.keystring = config.keystring
     frame.dropdata = config.dropdata
     if (frame.Text) then frame.Text:SetWidth(90) end
@@ -258,6 +325,7 @@ function widgets:dropdown(parent, config, labelText)
         end
     end, config.displayMode)
     frame.selectedFunc = function(self, value, text)
+        ---@type Frame|ContainerElement?
         local parent = self:GetParent()
         if (not parent or not parent.anchorbutton) then return end
         if (value == "static" or value == "cursor") then
@@ -462,8 +530,14 @@ function widgets:anchorbutton(parent, config)
     return frame
 end
 
+---@class ContainerElement : Frame, BackdropTemplate
+---@field checkbox CheckboxWidget
+---@field colorpick ColorPickerWidget
+---@field colordropdown DropdownWidget
+---@field editbox EditBoxWidget
+---@field filterdropdown DropdownWidget
 function widgets:element(parent, config)
-    local frame = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local frame = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil) --[[@as ContainerElement]]
     frame:SetSize(560, 30)
     frame:SetBackdrop({
         bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -493,9 +567,14 @@ function widgets:element(parent, config)
     end
     return frame
 end
-
+---@class WidgetAnchor : Frame
+---@field anchorbutton any
+---@field dropdown DropdownWidget
+---@field checkbox1 CheckboxWidget
+---@field checkbox2 CheckboxWidget
+---@field checkbox3 CheckboxWidget
 function widgets:anchor(parent, config)
-    local frame = CreateFrame("Frame", nil, parent)
+    local frame = CreateFrame("Frame", nil, parent) --[[@as WidgetAnchor]]
     frame:SetSize(400, 30)
     frame.anchorbutton = self:anchorbutton(frame, config)
     frame.dropdown = self:dropdown(frame, {keystring=config.keystring..".position",dropdata=config.dropdata})
@@ -844,6 +923,8 @@ end
 
 local diytable, diyPlayerTable = {}, {}
 
+---DIY Frame is the fake tooltip used when configuring the style of the tooltip inside of the addon options.
+---@class TinyTooltip.DIYFrame : TinyTooltip.GameTooltip
 local frame = CreateFrame("Frame", nil, framePCScrollFrame)
 tinsert(addon.tooltips, frame)
 frame:Show()
@@ -866,7 +947,7 @@ frame.close:GetNormalTexture():SetVertexColor(0.9, 0.6, 0)
 frame.close:Hide()
 frame.tips = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalLargeOutline")
 frame.tips:SetPoint("BOTTOM", 0, 6)
-frame.tips:SetFont(frame.tips:GetFont(), 12, "NONE")
+frame.tips:SetFont(frame.tips:GetFont() --[[@as string]], 12, "NONE")
 frame.tips:SetText(L["<Drag element to customize the style>"])
 frame.arrow = frame:CreateTexture(nil, "OVERLAY")
 frame.arrow:SetSize(32, 48)

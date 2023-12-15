@@ -9,6 +9,7 @@ local OFFLINE = FRIENDS_LIST_OFFLINE
 local FACTION_HORDE = FACTION_HORDE
 local FACTION_ALLIANCE = FACTION_ALLIANCE
 
+---@class TinyTooltip
 local addon = TinyTooltip
 
 local function strip(text)
@@ -29,17 +30,23 @@ local function ColorBorder(tip, config, raw)
     end
 end
 
+---Color background for current unit tooltip.
+---@param tip TinyTooltip.GameTooltip
+---@param config TinyTooltip.db.unitConfig
+---@param raw TinyTooltip.UnitInfo
 local function ColorBackground(tip, config, raw)
     local bg = config.background
     if not bg then return end
     if (bg.colorfunc == "default" or bg.colorfunc == "" or bg.colorfunc == "inherit") then
         local r, g, b, a = unpack(addon.db.general.background)
+        -- assert(type(bg.alpha) == "number", "unit.config.background.alpha must be a number, got " .. type(bg.alpha) .. ".")
         a = bg.alpha or a
         LibEvent:trigger("tooltip.style.background", tip, r, g, b, a)
         return
     end
     if (addon.colorfunc[bg.colorfunc]) then
         local r, g, b = addon.colorfunc[bg.colorfunc](raw)
+        -- assert(type(bg.alpha) == "number", "unit.config.background.alpha must be a number, got " .. type(bg.alpha) .. ".")
         local a = bg.alpha or 0.8
         LibEvent:trigger("tooltip.style.background", tip, r, g, b, a)
     end
@@ -68,6 +75,11 @@ local function ShowBigFactionIcon(tip, config, raw)
     end
 end
 
+---Handle tooltip for player characters
+---@param tip TinyTooltip.GameTooltip
+---@param unit string
+---@param config TinyTooltip.db.unitConfig
+---@param raw TinyTooltip.UnitInfo
 local function PlayerCharacter(tip, unit, config, raw)
     local data = addon:GetUnitData(unit, config.elements, raw)
     addon:HideLines(tip, 2, 3)
@@ -124,5 +136,6 @@ LibEvent:attachTrigger("tooltip:unit", function(self, tip, unit)
     end
 end)
 
+-- Unit related injections to addons private table
 addon.ColorUnitBorder = ColorBorder
 addon.ColorUnitBackground = ColorBackground
